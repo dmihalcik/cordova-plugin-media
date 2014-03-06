@@ -94,7 +94,6 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
         this.handler = handler;
         this.id = id;
         this.audioFile = file;
-        this.recorder = new MediaRecorder();
 
         if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
             this.tempFile = Environment.getExternalStorageDirectory().getAbsolutePath() + "/tmprecording.3gp";
@@ -137,6 +136,9 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
             break;
         case NONE:
             this.audioFile = file;
+            if (null == this.recorder) {
+                this.recorder = new MediaRecorder();
+            }
             this.recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
             this.recorder.setOutputFormat(MediaRecorder.OutputFormat.DEFAULT); // THREE_GPP);
             this.recorder.setAudioEncoder(MediaRecorder.AudioEncoder.DEFAULT); //AMR_NB);
