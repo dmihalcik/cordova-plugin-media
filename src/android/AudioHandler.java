@@ -27,6 +27,8 @@ import android.media.AudioManager;
 import android.net.Uri;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 
 import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
@@ -45,6 +47,11 @@ import java.util.HashMap;
  * 		sdcard:				file name is just sound.mp3
  */
 public class AudioHandler extends CordovaPlugin {
+    private static final HashSet<String> ACTIONS = new HashSet<String>(Arrays.asList(new String[] {
+			"startRecordingAudio", "stopRecordingAudio", "startPlayingAudio",
+			"seekToAudio", "pausePlayingAudio", "stopPlayingAudio",
+			"setVolume", "getCurrentPositionAudio", "getDurationAudio",
+			"create", "release" }));
 
     public static String TAG = "AudioHandler";
     HashMap<String, AudioPlayer> players;	// Audio player object
@@ -65,11 +72,25 @@ public class AudioHandler extends CordovaPlugin {
      * @param callbackContext		The callback context used when calling back into JavaScript.
      * @return 				A PluginResult object with a status and message.
      */
-    public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+    public boolean execute(final String action, final JSONArray args, final CallbackContext callbackContext) throws JSONException {
+    	if (!ACTIONS.contains(action)) {
+    		return false;
+    	}
+        Runnable command = new Runnable() {
+			public void run() {
+				performAction(action, args, callbackContext);
+			}
+		};
+		super.webView.getHandler().post(command);
+		return true;
+    }
+
+    protected void performAction(String action, JSONArray args, CallbackContext callbackContext) {
         CordovaResourceApi resourceApi = webView.getResourceApi();
         PluginResult.Status status = PluginResult.Status.OK;
-        String result = "";
+		PluginResult result = null;
 
+        try{
         if (action.equals("startRecordingAudio")) {
             String target = args.getString(1);
             String fileUriStr;
@@ -111,13 +132,11 @@ public class AudioHandler extends CordovaPlugin {
            }
         } else if (action.equals("getCurrentPositionAudio")) {
             float f = this.getCurrentPositionAudio(args.getString(0));
-            callbackContext.sendPluginResult(new PluginResult(status, f));
-            return true;
+			result = new PluginResult(status, f);
         }
         else if (action.equals("getDurationAudio")) {
             float f = this.getDurationAudio(args.getString(0), args.getString(1));
-            callbackContext.sendPluginResult(new PluginResult(status, f));
-            return true;
+			result = new PluginResult(status, f);
         }
         else if (action.equals("create")) {
             String id = args.getString(0);
@@ -127,16 +146,15 @@ public class AudioHandler extends CordovaPlugin {
         }
         else if (action.equals("release")) {
             boolean b = this.release(args.getString(0));
-            callbackContext.sendPluginResult(new PluginResult(status, b));
-            return true;
+			result = new PluginResult(status, b);
         }
-        else { // Unrecognized action.
-            return false;
-        }
-
-        callbackContext.sendPluginResult(new PluginResult(status, result));
-
-        return true;
+		} catch (JSONException e) {
+			result = new PluginResult(PluginResult.Status.JSON_EXCEPTION, e.getMessage());
+		}
+		if (null == result) {
+			result = new PluginResult(status, "");
+		}
+		callbackContext.sendPluginResult(result);
     }
 
     /**
